@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Review & Documentation Generator</title>
+    <meta name="description"
+        content="AI Code Review & Documentation Generator: Automate code property analysis, performance estimation, and professional documentation synthesis.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #0b1121;
+            --bg-tertiary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary-gradient: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            --secondary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+        body { background-color: var(--bg-secondary) !important; color: var(--text-primary) !important; }
+        .background-gradient {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(236, 72, 153, 0.15) 50%, transparent 100%);
+            height: 100vh !important;
+            position: fixed !important;
+        }
+        .background-gradient::before { background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%); }
+        .background-gradient::after { background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%); }
+        .card-header { background: linear-gradient(to bottom, var(--bg-tertiary), var(--bg-primary)); }
+        .collapsible-header:hover { background: linear-gradient(to bottom, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.1)); }
+        .btn-primary { box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3); }
+        .btn-primary:hover { box-shadow: 0 6px 25px rgba(236, 72, 153, 0.5); }
+        .lang-btn { color: var(--text-muted) !important; }
+        .lang-btn:hover { color: var(--text-primary) !important; }
+        .lang-btn.active { background: var(--border-color) !important; color: white !important; }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color); }
+        .btn-secondary:hover { background: var(--border-color); color: white; }
+        .problem-input { background: var(--bg-tertiary); border-color: var(--border-color); color: white; }
+        #reviewOptionsMenu { backdrop-filter: blur(16px); }
+    </style>
+</head>
+
+<body>
+    <div class="background-gradient"></div>
+
+    <header class="header">
+        <div class="container">
+            <div class="logo-section">
+                <svg class="logo-icon" width="40" height="40" viewBox="0 0 40 40" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="8" fill="url(#gradient1)" />
+                    <path d="M12 20L18 14L24 20L18 26L12 20Z" fill="white" opacity="0.9" />
+                    <path d="M20 12L28 20L20 28" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7" />
+                    <defs>
+                        <linearGradient id="gradient1" x1="0" y1="0" x2="40" y2="40">
+                            <stop offset="0%" stop-color="#667eea" />
+                            <stop offset="100%" stop-color="#764ba2" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1 class="logo-text">AI Code Review</h1>
+            </div>
+            <p class="tagline">Intelligent Review & Automated Documentation Generator</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container-wide">
+            <div class="split-layout">
+                <div class="split-left">
+                    <div class="card">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <h2>Code Input</h2>
+                                <p class="card-subtitle" style="color: var(--text-muted); margin-top: 4px;">Upload a file or paste your code directly</p>
+                            </div>
+                            
+                            <div style="position: relative; display: inline-block;" id="reviewOptionsDropdown">
+                                <button type="button" class="btn-secondary btn-small" id="reviewOptionsBtn" onclick="document.getElementById('reviewOptionsMenu').style.display = document.getElementById('reviewOptionsMenu').style.display === 'none' ? 'block' : 'none';" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                    Review Options
+                                </button>
+                                <div id="reviewOptionsMenu" style="display: none; position: absolute; top: 120%; right: 0; background: var(--bg-tertiary); border-radius: 12px; width: 260px; box-shadow: var(--shadow-xl); z-index: 100; padding: 16px; border: 1px solid var(--border-color); color: var(--text-primary); text-align: left;">
+                                    <div style="margin-bottom: 12px;">
+                                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Code Quality</span>
+                                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" id="chk-naming" checked style="accent-color: #a855f7;" onchange="updateReviewVisibility()"> Naming Practices
+                                        </label>
+                                    </div>
+                                    <div style="margin-bottom: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Analysis</span>
+                                        
+                                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" id="chk-maintainability" checked style="accent-color: #a855f7;" onchange="updateReviewVisibility()"> Maintainability
+                                        </label>
+                                    </div>
+                                    <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+                                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Deep Analysis</span>
+                                        <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" id="chk-smells" checked style="accent-color: #a855f7;" onchange="updateReviewVisibility()"> Suggested Improvements
+                                        </label>
+                                         <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" id="chk-security" checked style="accent-color: #a855f7;" onchange="updateReviewVisibility()"> Code Safety
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <form id="codeForm" enctype="multipart/form-data">
+                                <div class="input-field-wrapper">
+                                    <div class="input-label collapsible-input-header collapsed"
+                                        data-target="problemStatementField">
+                                        <div>
+                                            <span>Description - For better Analysis(Optional)</span>
+                                            <span class="label-hint">Help us provide better naming suggestions</span>
+                                        </div>
+                                        <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20"
+                                            fill="none">
+                                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </div>
+                                    <div class="collapsible-input-body collapsed" id="problemStatementField">
+                                        <textarea id="problemStatement" name="problem_statement" class="problem-input"
+                                            placeholder="Example: Write a function to swap two numbers without using a temporary variable..."
+                                            rows="3" spellcheck="true"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="code-editor-wrapper">
+                                    <div class="code-editor-header">
+                                        <style>
+                                            .lang-btn {
+                                                padding: 6px 16px;
+                                                border-radius: 6px;
+                                                border: none;
+                                                font-weight: 500;
+                                                font-size: 13px;
+                                                font-family: 'Inter', sans-serif;
+                                                cursor: pointer;
+                                                transition: all 0.2s;
+                                                background: transparent;
+                                                color: #64748b;
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 6px;
+                                            }
+
+                                            .lang-btn:hover {
+                                                color: #0f172a;
+                                            }
+
+                                            .lang-btn.active {
+                                                background: white;
+                                                color: #0f172a;
+                                                font-weight: 600;
+                                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                                            }
+                                        </style>
+                                        <div style="display: flex; align-items: center; gap: 16px;">
+                                            <span class="editor-label">Code Editor</span>
+                                            <div
+                                                style="display: flex; background: var(--bg-tertiary); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                                <button type="button" class="lang-btn active" data-lang="python">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <polyline points="4 7 4 4 20 4 20 7" />
+                                                        <line x1="9" y1="20" x2="15" y2="20" />
+                                                        <line x1="12" y1="4" x2="12" y2="20" />
+                                                    </svg>
+                                                    Python
+                                                </button>
+                                                <button type="button" class="lang-btn" data-lang="java">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+                                                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+                                                        <line x1="6" y1="1" x2="6" y2="4" />
+                                                        <line x1="10" y1="1" x2="10" y2="4" />
+                                                        <line x1="14" y1="1" x2="14" y2="4" />
+                                                    </svg>
+                                                    Java
+                                                </button>
+                                            </div>
+                                            <input type="hidden" id="languageSelect" name="language" value="python">
+
+                                            <span id="analyzingIndicator"
+                                                style="font-size: 13px; color: #3b82f6; font-weight: 600; background: rgba(59, 130, 246, 0.2); padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
+                                                <span
+                                                    style="width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; display: inline-block;"></span>
+                                                <span id="analyzingText" style="color: #60a5fa;">Analyzing: Python</span>
+                                            </span>
+                                        </div>
+                                        <div class="editor-actions">
+                                            <label for="fileInput" class="btn-secondary btn-small"
+                                                style="cursor: pointer;">
+                                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                                    style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                                    <path d="M8 4V12M8 4L6 6M8 4L10 6" stroke="currentColor"
+                                                        stroke-width="1.5" stroke-linecap="round" />
+                                                    <path
+                                                        d="M13 10V12C13 12.5523 12.5523 13 12 13H4C3.44772 13 3 12.5523 3 12V10"
+                                                        stroke="currentColor" stroke-width="1.5"
+                                                        stroke-linecap="round" />
+                                                </svg>
+                                                Upload File
+                                            </label>
+                                            <button type="button" class="btn-secondary btn-small"
+                                                id="clearBtn">Clear</button>
+                                            <input type="file" id="fileInput" accept=".py,.java,.txt" hidden>
+                                        </div>
+                                    </div>
+                                    <div class="editor-wrapper"
+                                        style="position: relative; height: 500px; overflow: hidden; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #1e1e1e; box-shadow: var(--shadow-md);">
+                                        <div id="editorPlaceholder" style="display: none;"></div>
+                                        <div id="editor" style="height: 100%; width: 100%;"></div>
+                                        <input type="hidden" id="codeInput" name="code">
+                                    </div>
+                                </div>
+
+                                <div id="errorDisplay" class="error-message" style="display: none;"></div>
+
+                                <button type="submit" class="btn-primary btn-large" id="analyzeBtn">
+                                    <span>Analyze Code</span>
+                                    <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                        <path d="M5 10H15M15 10L10 5M15 10L10 15" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="split-right">
+                    <div id="resultsContainer" style="display: none;">
+
+                        <div class="results-action-bar"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div class="view-tabs" style="display: flex; gap: 8px; background: var(--bg-tertiary); padding: 4px; border-radius: 10px; border: 1px solid var(--border-color);">
+                                <button id="tab-analysis" onclick="switchRightPanelTab('analysis')" class="active" style="padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--primary-color); color: white; transition: all 0.2s;">Analysis Results</button>
+                                <button id="tab-refined" onclick="switchRightPanelTab('refined')" style="padding: 8px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s;">Refined Code</button>
+                            </div>
+                            <button id="viewDocsBtn" class="btn-primary"
+                                style="background: linear-gradient(135deg, #10b981, #059669); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; color: white; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); transition: all 0.2s ease;">
+                                <span>👉</span> View Full Documentation
+                            </button>
+                        </div>
+                        
+                        <div id="refinedCodeView" style="display: none; height: calc(100vh - 160px); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #1e1e1e;">
+                            <div id="refinedEditor" style="width: 100%; height: 100%;"></div>
+                        </div>
+
+                        <div id="analysisCardsView" style="display: flex; flex-direction: column; gap: var(--spacing-lg, 24px); width: 100%;">
+                        <div class="card result-card" id="card-overview">
+                            <div class="card-header collapsible-header collapsed" data-target="overviewBody">
+                                <h2>About Code</h2>
+                                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="card-body collapsible-body collapsed" id="overviewBody">
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Lines of Code</span>
+                                        <span class="info-value" id="linesOfCode">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Functions</span>
+                                        <span class="info-value" id="functionsCount">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Classes</span>
+                                        <span class="info-value" id="classesCount">-</span>
+                                    </div>
+                                    <div class="info-item" style="border-left: 1px solid var(--border-color); padding-left: 24px;">
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                            <span class="info-label" style="color: var(--text-secondary); margin-bottom: 0;">Time Complexity</span>
+                                            <span title="Big-O notation represents how execution time grows relative to input size (N)." style="cursor:help; display: flex; align-items: center; opacity: 0.6;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                            </span>
+                                        </div>
+                                        <div id="complexityBadge" style="display: inline-flex; align-items: center; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); padding: 6px 12px; border-radius: 8px; transition: all 0.3s ease;">
+                                            <span id="timeComplexity" style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: #a855f7;">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card result-card" id="card-security">
+                            <div class="card-header collapsible-header collapsed" data-target="securityBody">
+                                <h2 style="display: flex; align-items: center; gap: 8px;">Code Safety Review</h2>
+                                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="card-body collapsible-body collapsed" id="securityBody">
+                                <div id="securityAnalysis"></div>
+                            </div>
+                        </div>
+
+                        <div class="card result-card" id="card-metrics">
+                            <div class="card-header collapsible-header collapsed" data-target="qualityBody">
+                                <h3>Code Quality Metrics</h3>
+                                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="card-body collapsible-body collapsed" id="qualityBody">
+                                <div id="qualityMetrics"></div>
+                            </div>
+                        </div>
+
+                        <div class="card result-card" id="issuesCard" style="display: none;">
+                            <div class="card-header collapsible-header collapsed" data-target="issuesBody">
+                                <h3>Identified Issues</h3>
+                                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="card-body collapsible-body collapsed" id="issuesBody">
+                                <div id="detectedIssues"></div>
+                            </div>
+                        </div>
+
+                        <div class="card result-card" id="card-naming">
+                            <div class="card-header collapsible-header collapsed" data-target="namingBody">
+                                <h3>Naming & Readability</h3>
+                                <svg class="chevron-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div class="card-body collapsible-body collapsed" id="namingBody">
+                                <div id="namingAnalysis"></div>
+                            </div>
+                        </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="documentationOverlay"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); z-index: 9999; overflow-y: auto; padding-bottom: 60px;">
+        <div class="doc-container"
+            style="max-width: 1000px; margin: 0 auto; padding: 40px 24px; font-family: 'Inter', sans-serif;">
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 24px; margin-bottom: 32px; flex-wrap: wrap; gap: 24px;">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 40px;">
+                   
+                    <div
+                        style="display: flex; background: var(--bg-tertiary); padding: 6px; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <button id="tabDocsBtn"
+                            style="background: #3b82f6; color: var(--bg-primary); border: none; padding: 10px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                            📘 Documentation
+                        </button>
+                        <button id="tabReviewBtn"
+                            style="background: transparent; color: var(--text-secondary); border: none; padding: 10px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+                            ⚠ Code Review
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 16px; align-items: center;" id="downloadDocsWrapper">
+                    <div style="position: relative; display: inline-block;">
+                        <button id="downloadDocsDropdownBtn" class="btn-primary"
+                            style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">
+                            <span style="font-size: 18px;">📥</span> Download Documentation
+                        </button>
+                        <div id="downloadDropdownMenu"
+                            style="display: none; position: absolute; right: 0; top: 110%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; width: 220px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); z-index: 100; overflow: hidden;">
+                            <button id="downloadPdfBtn"
+                                style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; border-bottom: 1px solid var(--bg-tertiary); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif;">
+                                Download as PDF
+                            </button>
+                            <button id="downloadMdBtn"
+                                style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; border-bottom: 1px solid var(--bg-tertiary); color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                Download as Markdown
+                            </button>
+                        </div>
+                    </div>
+                    <button id="closeDocsBtn" class="btn-primary"
+                        style="background: var(--bg-primary); color: var(--text-primary); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        Back to Analysis
+                    </button>
+                </div>
+            </div>
+            <div id="fullDocContent"></div>
+
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p></p>
+        </div>
+    </footer>
+
+    <style>
+        .result-card { margin-bottom: 10px !important; }
+        #analysisCardsView > .result-card:last-child { margin-bottom: 10px !important; }
+        .hidden-by-option { display: none !important; }
+        .collapsible-body:not(.collapsed) { max-height: 999999px !important; overflow: visible !important; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+    </style>
+    <script>
+        let refinedEditorInstance = null;
+        let testEditorInstance = null;
+        function switchRightPanelTab(tab) {
+            document.getElementById('tab-analysis').style.background = tab === 'analysis' ? 'var(--primary-color)' : 'transparent';
+            document.getElementById('tab-analysis').style.color = tab === 'analysis' ? 'white' : 'var(--text-secondary)';
+            document.getElementById('tab-refined').style.background = tab === 'refined' ? 'var(--primary-color)' : 'transparent';
+            document.getElementById('tab-refined').style.color = tab === 'refined' ? 'white' : 'var(--text-secondary)';
+            
+            document.getElementById('analysisCardsView').style.display = tab === 'analysis' ? 'block' : 'none';
+            document.getElementById('refinedCodeView').style.display = tab === 'refined' ? 'block' : 'none';
+            
+            if (tab === 'refined' && refinedEditorInstance) {
+                refinedEditorInstance.layout();
+            }
+        }
+        
+        function updateReviewVisibility() {
+            const chkNaming = document.getElementById('chk-naming')?.checked ?? true;
+            const chkStructure = document.getElementById('chk-structure')?.checked ?? true;
+            const chkLogic = document.getElementById('chk-logic')?.checked ?? true;
+            const chkBugs = document.getElementById('chk-bugs')?.checked ?? true;
+            const chkMaintainability = document.getElementById('chk-maintainability')?.checked ?? true;
+            const chkSmells = document.getElementById('chk-smells')?.checked ?? true;
+
+            const toggleCard = (id, isVisible) => {
+                const card = document.getElementById(id);
+                if (card) {
+                    if (isVisible) card.classList.remove('hidden-by-option');
+                    else card.classList.add('hidden-by-option');
+                }
+            };
+
+            toggleCard('card-naming', chkNaming);
+            toggleCard('card-overview', chkStructure);
+            toggleCard('card-metrics', chkMaintainability);
+            toggleCard('issuesCard', chkBugs || chkSmells);
+            toggleCard('card-improvements', chkLogic);
+            
+            const chkSecurity = document.getElementById('chk-security')?.checked ?? true;
+            toggleCard('card-security', chkSecurity);
+        }
+        setInterval(updateReviewVisibility, 1000); 
+    </script>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
